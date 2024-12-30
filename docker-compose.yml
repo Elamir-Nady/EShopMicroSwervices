@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  sql_server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql_server
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Amir@1009 
+    ports:
+      - "1533:1433" 
+    networks:
+      - internal_network
+    volumes:
+      - sql_data:/var/opt/mssql
+
+  basket.api:
+    image: ${DOCKER_REGISTRY-}basketapi
+    build:
+      context: .
+      dockerfile: src/Services/Basket/Basket.Api/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ConnectionStrings__DefaultConnection=Server=sql_server;Database=BasketDb;User Id=sa;Password=YourStrong@Passw0rd;
+    ports:
+      - "6000:8002"
+      - "6060:8003"
+    networks:
+      - internal_network
+    depends_on:
+      - sql_server
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+
+  catalog.api:
+    image: ${DOCKER_REGISTRY-}catalogapi
+    build:
+      context: src/Services/Catalog/Catalog.Api
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ConnectionStrings__DefaultConnection=Server=sql_server;Database=CatalogDb;User Id=sa;Password=YourStrong@Passw0rd;
+    ports:
+      - "5000:8000"
+      - "5050:8001"
+    networks:
+      - internal_network
+    depends_on:
+      - sql_server
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+
+networks:
+  internal_network:
+
+volumes:
+  sql_data:
